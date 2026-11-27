@@ -18,6 +18,21 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Generate debug keystore if missing
+        run: |
+          if [ ! -f "debug.keystore" ]; then
+            STORE_PASS=$(grep -A 20 'debugConfig' app/build.gradle.kts | grep -oP 'storePassword\s*=?\s*"\K[^"]+' | head -n 1 || true)
+            KEY_ALIAS=$(grep -A 20 'debugConfig' app/build.gradle.kts | grep -oP 'keyAlias\s*=?\s*"\K[^"]+' | head -n 1 || true)
+            KEY_PASS=$(grep -A 20 'debugConfig' app/build.gradle.kts | grep -oP 'keyPassword\s*=?\s*"\K[^"]+' | head -n 1 || true)
+            STORE_PASS=${STORE_PASS:-android}
+            KEY_ALIAS=${KEY_ALIAS:-androiddebugkey}
+            KEY_PASS=${KEY_PASS:-android}
+            keytool -genkeypair -v -keystore debug.keystore \
+              -storepass "$STORE_PASS" -alias "$KEY_ALIAS" -keypass "$KEY_PASS" \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
       - name: Ensure Gradle wrapper exists
         run: |
           if [ ! -f "./gradlew" ] || [ ! -f "./gradle/wrapper/gradle-wrapper.jar" ]; then
@@ -32,4 +47,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/*.apk
