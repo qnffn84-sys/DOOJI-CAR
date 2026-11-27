@@ -1,0 +1,8 @@
+{
+  "name": "두지카",
+  "description": "다수 회사 법인 차량의 정비, 보험, 오일 알림, 주차 사진 및 현황을 관리하는 앱",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

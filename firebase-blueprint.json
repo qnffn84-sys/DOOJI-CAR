@@ -1,0 +1,393 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated Google user's Doojicar profile with nickname, biometric lock, theme, and oil alert preferences.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the Google-authenticated owner."
+        },
+        "nickname": {
+          "type": "string",
+          "description": "User display nickname set on first Google sign-in (1-24 chars)."
+        },
+        "email": {
+          "type": "string",
+          "description": "Optional Google account email (0-120 chars)."
+        },
+        "biometricEnabled": {
+          "type": "boolean",
+          "description": "Whether biometric unlock is active on app launch."
+        },
+        "darkMode": {
+          "type": "string",
+          "enum": ["SYSTEM", "DARK", "LIGHT"],
+          "description": "Preferred UI theme mode."
+        },
+        "oilAlertEnabled": {
+          "type": "boolean",
+          "description": "Global toggle for engine oil replacement reminders."
+        },
+        "oilAlertThresholdKm": {
+          "type": "integer",
+          "description": "Remaining mileage threshold (km) to notify before oil change."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp written with FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp written with FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "nickname",
+        "biometricEnabled",
+        "darkMode",
+        "oilAlertEnabled",
+        "oilAlertThresholdKm",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Company": {
+      "title": "Company",
+      "description": "Company/organization owning one or more fleet vehicles.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Company display name (1-60 chars)."
+        },
+        "code": {
+          "type": "string",
+          "description": "Short 1-20 char emblem label or code."
+        },
+        "accentColorHex": {
+          "type": "string",
+          "description": "Hex accent color in #RRGGBB format."
+        },
+        "backgroundPhotoPath": {
+          "type": "string",
+          "description": "Optional local app-private file path of the company card background photo."
+        },
+        "backgroundPhotoBase64": {
+          "type": "string",
+          "description": "Optional compressed JPEG background image in Base64 for cross-device sync."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp written with FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp written with FieldValue.serverTimestamp()."
+        }
+      },
+      "required": ["name", "code", "accentColorHex", "createdAt", "updatedAt"]
+    },
+    "Vehicle": {
+      "title": "Vehicle",
+      "description": "Corporate vehicle belonging to a company with parking location/photo, mileage, status, status edit audit, engine oil alert settings, and insurance details.",
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string",
+          "description": "Document ID of the parent Company."
+        },
+        "plateNumber": {
+          "type": "string",
+          "description": "Vehicle license plate number (2-20 chars)."
+        },
+        "modelName": {
+          "type": "string",
+          "description": "Vehicle model/type name (1-60 chars)."
+        },
+        "year": {
+          "type": "integer",
+          "description": "Model year (1990-2100)."
+        },
+        "parkingLocation": {
+          "type": "string",
+          "description": "Current parking bay or location text (0-100 chars)."
+        },
+        "parkingPhotoPath": {
+          "type": "string",
+          "description": "Optional local app-private file path of the captured parking photo."
+        },
+        "parkingPhotoBase64": {
+          "type": "string",
+          "description": "Optional compressed JPEG thumbnail in Base64 for cross-device sync."
+        },
+        "vehiclePhotoPath": {
+          "type": "string",
+          "description": "Optional local app-private file path of the vehicle representative photo."
+        },
+        "vehiclePhotoBase64": {
+          "type": "string",
+          "description": "Optional compressed JPEG representative photo thumbnail in Base64 for cross-device sync."
+        },
+        "mileageKm": {
+          "type": "integer",
+          "description": "Current odometer reading in km (0-2000000)."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ACTIVE", "IDLE", "MAINTENANCE", "ATTENTION"],
+          "description": "Current operational status of the vehicle."
+        },
+        "statusUpdatedBy": {
+          "type": "string",
+          "description": "Optional nickname of the user who last modified the vehicle status (1-24 chars)."
+        },
+        "statusUpdatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional server timestamp of the last vehicle status update."
+        },
+        "lastOilChangeKm": {
+          "type": "integer",
+          "description": "Odometer reading at the last engine oil change (km)."
+        },
+        "oilChangeIntervalKm": {
+          "type": "integer",
+          "description": "Engine oil replacement interval in km (1000-50000)."
+        },
+        "oilAlertEnabled": {
+          "type": "boolean",
+          "description": "Whether oil replacement alerts are enabled for this vehicle."
+        },
+        "insuranceCompany": {
+          "type": "string",
+          "description": "Insurance provider name (0-60 chars)."
+        },
+        "insurancePolicyNo": {
+          "type": "string",
+          "description": "Insurance policy number (0-60 chars)."
+        },
+        "insuranceExpiryDate": {
+          "type": "string",
+          "description": "Insurance expiration date string YYYY-MM-DD (0-20 chars)."
+        },
+        "insuranceCoverage": {
+          "type": "string",
+          "description": "Summary of insurance coverage (0-100 chars)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp written with FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp written with FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "companyId",
+        "plateNumber",
+        "modelName",
+        "year",
+        "parkingLocation",
+        "mileageKm",
+        "status",
+        "lastOilChangeKm",
+        "oilChangeIntervalKm",
+        "oilAlertEnabled",
+        "insuranceCompany",
+        "insurancePolicyNo",
+        "insuranceExpiryDate",
+        "insuranceCoverage",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MaintenanceRecord": {
+      "title": "MaintenanceRecord",
+      "description": "Service and maintenance history entry for a specific vehicle.",
+      "type": "object",
+      "properties": {
+        "vehicleId": {
+          "type": "string",
+          "description": "Document ID of the parent Vehicle."
+        },
+        "serviceDate": {
+          "type": "string",
+          "description": "Service date YYYY-MM-DD (1-20 chars)."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["ENGINE_OIL", "TIRE", "BRAKE", "INSPECTION", "REPAIR", "OTHER"],
+          "description": "Maintenance category."
+        },
+        "title": {
+          "type": "string",
+          "description": "Short summary of maintenance work (1-80 chars)."
+        },
+        "mileageKm": {
+          "type": "integer",
+          "description": "Vehicle mileage at time of service (km)."
+        },
+        "costKrw": {
+          "type": "integer",
+          "description": "Service cost in KRW."
+        },
+        "shopName": {
+          "type": "string",
+          "description": "Service center or garage name (0-60 chars)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp written with FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp written with FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "vehicleId",
+        "serviceDate",
+        "category",
+        "title",
+        "mileageKm",
+        "costKrw",
+        "shopName",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "VehicleChangeLog": {
+      "title": "VehicleChangeLog",
+      "description": "Immutable audit log entry recording who modified a vehicle, when, and exact field-level before/after changes.",
+      "type": "object",
+      "properties": {
+        "vehicleId": {
+          "type": "string",
+          "description": "Document ID of the parent Vehicle."
+        },
+        "editorNickname": {
+          "type": "string",
+          "description": "Nickname of the user who performed the modification (1-24 chars)."
+        },
+        "changeType": {
+          "type": "string",
+          "enum": ["STATUS", "PARKING", "OIL", "INSURANCE", "CREATED"],
+          "description": "Category of the modification."
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of concise before/after change strings (1-10 items)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Modification timestamp written with FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "vehicleId",
+        "editorNickname",
+        "changeType",
+        "changes",
+        "createdAt"
+      ]
+    },
+    "AppReleaseConfig": {
+      "title": "AppReleaseConfig",
+      "description": "Shared release version metadata managed by the app distribution admin to notify employees of new updates and link to Firebase App Distribution.",
+      "type": "object",
+      "properties": {
+        "adminUid": {
+          "type": "string",
+          "description": "Immutable Firebase Auth UID of the release administrator."
+        },
+        "latestVersionCode": {
+          "type": "integer",
+          "description": "Latest published Android versionCode (1-100000)."
+        },
+        "latestVersionName": {
+          "type": "string",
+          "description": "Latest published version name such as 1.1 (1-20 chars)."
+        },
+        "downloadUrl": {
+          "type": "string",
+          "description": "HTTPS download or Firebase App Distribution release link (8-500 chars)."
+        },
+        "releaseNotes": {
+          "type": "string",
+          "description": "Short summary of what changed in the release (0-300 chars)."
+        },
+        "forceUpdate": {
+          "type": "boolean",
+          "description": "Whether the update dialog requires updating without a later button."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "Nickname of the admin who published the update notice (1-24 chars)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp written with FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp written with FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "adminUid",
+        "latestVersionCode",
+        "latestVersionName",
+        "downloadUrl",
+        "releaseNotes",
+        "forceUpdate",
+        "updatedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Owner-isolated Google user profile with nickname, biometric settings, theme, and oil alert preferences."
+    },
+    "/companies/{companyId}": {
+      "schema": { "$ref": "#/entities/Company" },
+      "description": "Shared company records visible and editable in real time by all signed-in team members."
+    },
+    "/vehicles/{vehicleId}": {
+      "schema": { "$ref": "#/entities/Vehicle" },
+      "description": "Shared fleet vehicle records visible and editable in real time by all signed-in team members."
+    },
+    "/vehicles/{vehicleId}/maintenance/{recordId}": {
+      "schema": { "$ref": "#/entities/MaintenanceRecord" },
+      "description": "Shared maintenance history records scoped under a specific vehicle."
+    },
+    "/vehicles/{vehicleId}/history/{logId}": {
+      "schema": { "$ref": "#/entities/VehicleChangeLog" },
+      "description": "Shared immutable modification audit history scoped under a specific vehicle."
+    },
+    "/app_config/release": {
+      "schema": { "$ref": "#/entities/AppReleaseConfig" },
+      "description": "Singleton release update notice readable by signed-in users and writable only by the admin who created it."
+    }
+  }
+}

@@ -1,0 +1,360 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Reusable Hardened Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    // --- Validation Blueprints ---
+    function isValidUserProfile(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             (!('nickname' in data) || (data.nickname is string && data.nickname.size() >= 1 && data.nickname.size() <= 24)) &&
+             (!('email' in data) || data.email == null || (data.email is string && data.email.size() <= 120)) &&
+             (!('workspaceId' in data) || data.workspaceId == null || (data.workspaceId is string && data.workspaceId.size() <= 32)) &&
+             (!('passwordHash' in data) || data.passwordHash == null || (data.passwordHash is string && data.passwordHash.size() <= 256)) &&
+             data.biometricEnabled is bool &&
+             data.darkMode is string && data.darkMode in ['SYSTEM', 'DARK', 'LIGHT'] &&
+             data.oilAlertEnabled is bool &&
+             data.oilAlertThresholdKm is int && data.oilAlertThresholdKm >= 100 && data.oilAlertThresholdKm <= 5000 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidCompany(data) {
+      return data.name is string && data.name.size() >= 1 && data.name.size() <= 60 &&
+             data.code is string && data.code.size() >= 1 && data.code.size() <= 20 &&
+             data.accentColorHex is string && data.accentColorHex.size() == 7 && data.accentColorHex.matches('^#[0-9A-Fa-f]{6}$') &&
+             (!('backgroundPhotoPath' in data) || data.backgroundPhotoPath == null || (data.backgroundPhotoPath is string && data.backgroundPhotoPath.size() <= 500)) &&
+             (!('backgroundPhotoBase64' in data) || data.backgroundPhotoBase64 == null || (data.backgroundPhotoBase64 is string && data.backgroundPhotoBase64.size() <= 350000)) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidVehicle(data) {
+      return isValidId(data.companyId) &&
+             data.plateNumber is string && data.plateNumber.size() >= 2 && data.plateNumber.size() <= 20 &&
+             data.modelName is string && data.modelName.size() >= 1 && data.modelName.size() <= 60 &&
+             data.year is int && data.year >= 1990 && data.year <= 2100 &&
+             data.parkingLocation is string && data.parkingLocation.size() <= 100 &&
+             (!('parkingPhotoPath' in data) || data.parkingPhotoPath == null || (data.parkingPhotoPath is string && data.parkingPhotoPath.size() <= 500)) &&
+             (!('parkingPhotoBase64' in data) || data.parkingPhotoBase64 == null || (data.parkingPhotoBase64 is string && data.parkingPhotoBase64.size() <= 350000)) &&
+             (!('vehiclePhotoPath' in data) || data.vehiclePhotoPath == null || (data.vehiclePhotoPath is string && data.vehiclePhotoPath.size() <= 500)) &&
+             (!('vehiclePhotoBase64' in data) || data.vehiclePhotoBase64 == null || (data.vehiclePhotoBase64 is string && data.vehiclePhotoBase64.size() <= 350000)) &&
+             data.mileageKm is int && data.mileageKm >= 0 && data.mileageKm <= 2000000 &&
+             data.status is string && data.status in ['ACTIVE', 'IDLE', 'MAINTENANCE', 'ATTENTION'] &&
+             (!('statusUpdatedBy' in data) || data.statusUpdatedBy == null || (data.statusUpdatedBy is string && data.statusUpdatedBy.size() >= 1 && data.statusUpdatedBy.size() <= 24)) &&
+             (!('statusUpdatedAt' in data) || data.statusUpdatedAt == null || isValidTimestamp(data.statusUpdatedAt)) &&
+             data.lastOilChangeKm is int && data.lastOilChangeKm >= 0 && data.lastOilChangeKm <= 2000000 &&
+             data.oilChangeIntervalKm is int && data.oilChangeIntervalKm >= 1000 && data.oilChangeIntervalKm <= 50000 &&
+             data.oilAlertEnabled is bool &&
+             data.insuranceCompany is string && data.insuranceCompany.size() <= 60 &&
+             data.insurancePolicyNo is string && data.insurancePolicyNo.size() <= 60 &&
+             data.insuranceExpiryDate is string && data.insuranceExpiryDate.size() <= 20 &&
+             data.insuranceCoverage is string && data.insuranceCoverage.size() <= 100 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidMaintenanceRecord(data, vehicleId) {
+      return data.vehicleId is string && data.vehicleId == vehicleId &&
+             data.serviceDate is string && data.serviceDate.size() >= 1 && data.serviceDate.size() <= 20 &&
+             data.category is string && data.category in ['ENGINE_OIL', 'TIRE', 'BRAKE', 'INSPECTION', 'REPAIR', 'OTHER'] &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 80 &&
+             data.mileageKm is int && data.mileageKm >= 0 && data.mileageKm <= 2000000 &&
+             data.costKrw is int && data.costKrw >= 0 && data.costKrw <= 100000000 &&
+             data.shopName is string && data.shopName.size() <= 60 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidVehicleChangeLog(data, vehicleId) {
+      return data.vehicleId is string && data.vehicleId == vehicleId &&
+             data.editorNickname is string && data.editorNickname.size() >= 1 && data.editorNickname.size() <= 24 &&
+             data.changeType is string && data.changeType in ['STATUS', 'PARKING', 'OIL', 'INSURANCE', 'CREATED'] &&
+             data.changes is list && data.changes.size() >= 1 && data.changes.size() <= 10 &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidAppReleaseConfig(data) {
+      return isValidId(data.adminUid) &&
+             data.latestVersionCode is int && data.latestVersionCode >= 1 && data.latestVersionCode <= 100000 &&
+             data.latestVersionName is string && data.latestVersionName.size() >= 1 && data.latestVersionName.size() <= 20 &&
+             data.downloadUrl is string && data.downloadUrl.size() >= 8 && data.downloadUrl.size() <= 500 &&
+             data.downloadUrl.matches('^https://.+') &&
+             data.releaseNotes is string && data.releaseNotes.size() <= 300 &&
+             data.forceUpdate is bool &&
+             data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 24 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    // --- Owner-Isolated User Profile & Preferences ---
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'nickname', 'biometricEnabled',
+                         'darkMode', 'oilAlertEnabled', 'oilAlertThresholdKm',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'nickname', 'email', 'workspaceId', 'passwordHash',
+                         'biometricEnabled', 'darkMode', 'oilAlertEnabled', 'oilAlertThresholdKm',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserProfile(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'nickname', 'biometricEnabled', 'darkMode', 'oilAlertEnabled', 'oilAlertThresholdKm', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // Legacy per-user fleet paths: read/delete only by original owner for one-time migration to shared collections
+      match /companies/{companyId} {
+        allow get: if isOwner(userId) && isValidId(companyId);
+        allow list: if isOwner(userId);
+        allow create, update: if false;
+        allow delete: if isOwner(userId) && isValidId(companyId);
+      }
+
+      match /vehicles/{vehicleId} {
+        allow get: if isOwner(userId) && isValidId(vehicleId);
+        allow list: if isOwner(userId);
+        allow create, update: if false;
+        allow delete: if isOwner(userId) && isValidId(vehicleId);
+
+        match /maintenance/{recordId} {
+          allow get: if isOwner(userId) && isValidId(vehicleId) && isValidId(recordId);
+          allow list: if isOwner(userId) && isValidId(vehicleId);
+          allow create, update: if false;
+          allow delete: if isOwner(userId) && isValidId(vehicleId) && isValidId(recordId);
+        }
+
+        match /history/{logId} {
+          allow get: if isOwner(userId) && isValidId(vehicleId) && isValidId(logId);
+          allow list: if isOwner(userId) && isValidId(vehicleId);
+          allow create, update: if false;
+          allow delete: if isOwner(userId) && isValidId(vehicleId) && isValidId(logId);
+        }
+      }
+    }
+
+    // --- Shared Team Fleet Collections (All Signed-In Google Users) ---
+    match /companies/{companyId} {
+      allow get: if isSignedIn() && isValidId(companyId);
+      allow list: if isSignedIn();
+
+      allow create: if isSignedIn() &&
+                       isValidId(companyId) &&
+                       incoming().keys().hasAll(['name', 'code', 'accentColorHex', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly([
+                         'name', 'code', 'accentColorHex',
+                         'backgroundPhotoPath', 'backgroundPhotoBase64',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidCompany(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(companyId) &&
+                       isValidCompany(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'name', 'code', 'accentColorHex',
+                         'backgroundPhotoPath', 'backgroundPhotoBase64',
+                         'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(companyId);
+    }
+
+    match /vehicles/{vehicleId} {
+      allow get: if isSignedIn() && isValidId(vehicleId);
+      allow list: if isSignedIn();
+
+      allow create: if isSignedIn() &&
+                       isValidId(vehicleId) &&
+                       incoming().keys().hasAll([
+                         'companyId', 'plateNumber', 'modelName', 'year', 'parkingLocation',
+                         'mileageKm', 'status', 'lastOilChangeKm', 'oilChangeIntervalKm',
+                         'oilAlertEnabled', 'insuranceCompany', 'insurancePolicyNo',
+                         'insuranceExpiryDate', 'insuranceCoverage', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'companyId', 'plateNumber', 'modelName', 'year', 'parkingLocation',
+                         'parkingPhotoPath', 'parkingPhotoBase64',
+                         'vehiclePhotoPath', 'vehiclePhotoBase64',
+                         'mileageKm', 'status', 'statusUpdatedBy', 'statusUpdatedAt',
+                         'lastOilChangeKm', 'oilChangeIntervalKm',
+                         'oilAlertEnabled', 'insuranceCompany', 'insurancePolicyNo',
+                         'insuranceExpiryDate', 'insuranceCoverage', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidVehicle(incoming()) &&
+                       exists(/databases/$(database)/documents/companies/$(incoming().companyId));
+
+      allow update: if isSignedIn() &&
+                       isValidId(vehicleId) &&
+                       isValidVehicle(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().companyId == existing().companyId &&
+                       (
+                         // Action: Admin mileage and status manual update with editor audit
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'mileageKm', 'status', 'statusUpdatedBy', 'statusUpdatedAt', 'updatedAt'
+                         ]) ||
+                         // Action: Parking location and photo update
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'parkingLocation', 'parkingPhotoPath', 'parkingPhotoBase64',
+                           'statusUpdatedBy', 'statusUpdatedAt', 'updatedAt'
+                         ]) ||
+                         // Action: Vehicle representative photo update
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'vehiclePhotoPath', 'vehiclePhotoBase64',
+                           'statusUpdatedBy', 'statusUpdatedAt', 'updatedAt'
+                         ]) ||
+                         // Action: Engine oil alert / oil change mileage update
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'lastOilChangeKm', 'oilChangeIntervalKm', 'oilAlertEnabled',
+                           'statusUpdatedBy', 'statusUpdatedAt', 'updatedAt'
+                         ]) ||
+                         // Action: Insurance details update
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'insuranceCompany', 'insurancePolicyNo', 'insuranceExpiryDate', 'insuranceCoverage',
+                           'statusUpdatedBy', 'statusUpdatedAt', 'updatedAt'
+                         ]) ||
+                         // Action: General vehicle edit
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'plateNumber', 'modelName', 'year', 'parkingLocation',
+                           'vehiclePhotoPath', 'vehiclePhotoBase64',
+                           'mileageKm', 'status', 'statusUpdatedBy', 'statusUpdatedAt',
+                           'lastOilChangeKm', 'oilChangeIntervalKm',
+                           'oilAlertEnabled', 'insuranceCompany', 'insurancePolicyNo',
+                           'insuranceExpiryDate', 'insuranceCoverage', 'updatedAt'
+                         ])
+                       );
+
+      allow delete: if isSignedIn() && isValidId(vehicleId);
+
+      // Shared maintenance records under a vehicle
+      match /maintenance/{recordId} {
+        allow get: if isSignedIn() && isValidId(vehicleId) && isValidId(recordId);
+        allow list: if isSignedIn() && isValidId(vehicleId);
+
+        allow create: if isSignedIn() &&
+                         isValidId(vehicleId) &&
+                         isValidId(recordId) &&
+                         incoming().keys().hasAll([
+                           'vehicleId', 'serviceDate', 'category', 'title',
+                           'mileageKm', 'costKrw', 'shopName', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'vehicleId', 'serviceDate', 'category', 'title',
+                           'mileageKm', 'costKrw', 'shopName', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidMaintenanceRecord(incoming(), vehicleId) &&
+                         exists(/databases/$(database)/documents/vehicles/$(vehicleId));
+
+        allow update: if isSignedIn() &&
+                         isValidId(vehicleId) &&
+                         isValidId(recordId) &&
+                         isValidMaintenanceRecord(incoming(), vehicleId) &&
+                         incoming().vehicleId == existing().vehicleId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'serviceDate', 'category', 'title', 'mileageKm', 'costKrw', 'shopName', 'updatedAt'
+                         ]);
+
+        allow delete: if isSignedIn() && isValidId(vehicleId) && isValidId(recordId);
+      }
+
+      // Shared immutable modification audit history under a vehicle
+      match /history/{logId} {
+        allow get: if isSignedIn() && isValidId(vehicleId) && isValidId(logId);
+        allow list: if isSignedIn() && isValidId(vehicleId);
+
+        allow create: if isSignedIn() &&
+                         isValidId(vehicleId) &&
+                         isValidId(logId) &&
+                         incoming().keys().hasAll([
+                           'vehicleId', 'editorNickname', 'changeType', 'changes', 'createdAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'vehicleId', 'editorNickname', 'changeType', 'changes', 'createdAt'
+                         ]) &&
+                         isValidVehicleChangeLog(incoming(), vehicleId) &&
+                         exists(/databases/$(database)/documents/vehicles/$(vehicleId));
+
+        allow update: if false;
+
+        allow delete: if isSignedIn() && isValidId(vehicleId) && isValidId(logId);
+      }
+    }
+
+    // Shared app update notice (singleton document, signed-in read, admin-owner write)
+    match /app_config/release {
+      allow get: if isSignedIn();
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       incoming().adminUid == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'adminUid', 'latestVersionCode', 'latestVersionName',
+                         'downloadUrl', 'releaseNotes', 'forceUpdate',
+                         'updatedBy', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'adminUid', 'latestVersionCode', 'latestVersionName',
+                         'downloadUrl', 'releaseNotes', 'forceUpdate',
+                         'updatedBy', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidAppReleaseConfig(incoming());
+
+      allow update: if isSignedIn() &&
+                       existing().adminUid == request.auth.uid &&
+                       incoming().adminUid == existing().adminUid &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidAppReleaseConfig(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'latestVersionCode', 'latestVersionName', 'downloadUrl',
+                         'releaseNotes', 'forceUpdate', 'updatedBy', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && existing().adminUid == request.auth.uid;
+    }
+  }
+}
