@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "288931087815",
+    "project_id": "dooji-car-ebe28",
+    "storage_bucket": "dooji-car-ebe28.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:288931087815:android:481932c8500268641045e2",
+        "android_client_info": {
+          "package_name": "com.aistudio.applet.rdwyxh"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDUKf0kOBhJSz2XGmTIq41iwUz2gihxrN0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
