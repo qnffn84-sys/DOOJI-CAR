@@ -18,20 +18,21 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Generate debug keystore if missing
+      - name: Generate debug keystore if missing and print SHA-1
         run: |
+          STORE_PASS=$(grep -A 20 'debugConfig' app/build.gradle.kts | grep -oP 'storePassword\s*=?\s*"\K[^"]+' | head -n 1 || true)
+          KEY_ALIAS=$(grep -A 20 'debugConfig' app/build.gradle.kts | grep -oP 'keyAlias\s*=?\s*"\K[^"]+' | head -n 1 || true)
+          KEY_PASS=$(grep -A 20 'debugConfig' app/build.gradle.kts | grep -oP 'keyPassword\s*=?\s*"\K[^"]+' | head -n 1 || true)
+          STORE_PASS=${STORE_PASS:-android}
+          KEY_ALIAS=${KEY_ALIAS:-androiddebugkey}
+          KEY_PASS=${KEY_PASS:-android}
           if [ ! -f "debug.keystore" ]; then
-            STORE_PASS=$(grep -A 20 'debugConfig' app/build.gradle.kts | grep -oP 'storePassword\s*=?\s*"\K[^"]+' | head -n 1 || true)
-            KEY_ALIAS=$(grep -A 20 'debugConfig' app/build.gradle.kts | grep -oP 'keyAlias\s*=?\s*"\K[^"]+' | head -n 1 || true)
-            KEY_PASS=$(grep -A 20 'debugConfig' app/build.gradle.kts | grep -oP 'keyPassword\s*=?\s*"\K[^"]+' | head -n 1 || true)
-            STORE_PASS=${STORE_PASS:-android}
-            KEY_ALIAS=${KEY_ALIAS:-androiddebugkey}
-            KEY_PASS=${KEY_PASS:-android}
             keytool -genkeypair -v -keystore debug.keystore \
               -storepass "$STORE_PASS" -alias "$KEY_ALIAS" -keypass "$KEY_PASS" \
               -keyalg RSA -keysize 2048 -validity 10000 \
               -dname "CN=Android Debug,O=Android,C=US"
           fi
+          keytool -list -v -keystore debug.keystore -storepass "$STORE_PASS" -alias "$KEY_ALIAS" | grep -E "SHA1:|SHA256:"
 
       - name: Ensure Gradle wrapper exists
         run: |
@@ -43,8 +44,10 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK and Keystore
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            debug.keystore
