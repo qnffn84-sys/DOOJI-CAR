@@ -1,1 +1,4 @@
-app/src/main/res/values/strings.xml
+<resources>
+    <string name="app_name">DOOJI-CAR</string>
+    <string name="default_web_client_id">임시값</string>
+</resources>
